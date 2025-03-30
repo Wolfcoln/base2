@@ -1,29 +1,78 @@
-const { ethers } = require("ethers");
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Contract Interaction</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.5.4/dist/ethers.min.js"></script>
+</head>
+<body>
+    <h1>Smart Contract Interaction on Base</h1>
+    
+    <button id="connectWallet">Connect Wallet</button>
+    <p id="walletAddress">Wallet not connected</p>
+    
+    <button id="getNumber">Get Number</button>
+    <button id="setNumber">Set Number</button>
+    
+    <p id="result"></p>
+    
+    <script>
+        const contractAddress = "0x5D9e8E37A96DD9Ed1e03D1c53C033EFc3ebEfdA8";
+        const contractABI = [
+            "function setNumber(uint256 _number) public",
+            "function getNumber() public view returns (uint256)"
+        ];
 
-// Подключение к сети Base
-const provider = new ethers.providers.JsonRpcProvider('https://mainnet.base.org');
-const signer = provider.getSigner();
+        let provider;
+        let signer;
+        let contract;
 
-// Адрес контракта и ABI
-const contractAddress = '0x5D9e8E37A96DD9Ed1e03D1c53C033EFc3ebEfdA8'; // Адрес контракта
-const abi = [
-  // ABI контракта
-  "function setNumber(uint256 _number) public",
-  "function getNumber() public view returns (uint256)"
-];
+        document.getElementById("connectWallet").onclick = async () => {
+            if (window.ethereum) {
+                try {
+                    await window.ethereum.request({ method: "eth_requestAccounts" });
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    signer = provider.getSigner();
+                    contract = new ethers.Contract(contractAddress, contractABI, signer);
+                    const address = await signer.getAddress();
+                    document.getElementById("walletAddress").innerText = `Connected: ${address}`;
+                } catch (error) {
+                    console.error("Error connecting wallet:", error);
+                }
+            } else {
+                alert("Please install MetaMask!");
+            }
+        };
 
-// Создание экземпляра контракта
-const contract = new ethers.Contract(contractAddress, abi, signer);
+        document.getElementById("getNumber").onclick = async () => {
+            if (!contract) return alert("Please connect your wallet first.");
+            try {
+                const number = await contract.getNumber();
+                document.getElementById("result").innerText = `Current Number: ${number.toString()}`;
+            } catch (error) {
+                console.error(error);
+                alert("Error retrieving number");
+            }
+        };
 
-// Функция для установки числа
-async function setNumber(num) {
-  const tx = await contract.setNumber(num);
-  await tx.wait();
-  console.log(`Number set to: ${num}`);
-}
+        document.getElementById("setNumber").onclick = async () => {
+            if (!contract) return alert("Please connect your wallet first.");
+            const num = prompt("Enter a number to set:");
+            if (num && !isNaN(num)) {
+                try {
+                    const tx = await contract.setNumber(num);
+                    await tx.wait();
+                    alert(`Number set to: ${num}`);
+                } catch (error) {
+                    console.error(error);
+                    alert("Error setting number");
+                }
+            } else {
+                alert("Please enter a valid number.");
+            }
+        };
+    </script>
+</body>
+</html>
 
-// Функция для получения числа
-async function getNumber() {
-  const number = await contract.getNumber();
-  console.log(`Current number: ${number.toString()}`);
-}
